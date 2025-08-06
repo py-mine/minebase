@@ -4,6 +4,7 @@
 ![supported python versions](https://img.shields.io/pypi/pyversions/minebase.svg)
 [![current PyPI version](https://img.shields.io/pypi/v/minebase.svg)](https://pypi.org/project/minebase/)
 [![CI](https://github.com/py-mine/minebase/actions/workflows/main.yml/badge.svg)](https://github.com/py-mine/minebase/actions/workflows/main.yml)
+[![minecraft-data autoupdate](https://github.com/py-mine/minebase/actions/workflows/update-minecraft-data.yml/badge.svg)](https://github.com/py-mine/minebase/actions/workflows/update-minecraft-data.yml)
 
 Minebase is a python wrapper around [`PrismarineJS/minecraft-data`](https://github.com/PrismarineJS/minecraft-data). It
 provides python bindings to access minecraft data useful for custom minecraft clients, servers and libraries.
