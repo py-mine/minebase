@@ -4,6 +4,9 @@ on:
   schedule:
     - cron: "0 15 * * *" # every day at 3 PM UTC
 
+env:
+  PYTHON_VERSION: "3.13"
+
 jobs:
   update-mcdata:
     runs-on: ubuntu-latest
