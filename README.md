@@ -23,7 +23,14 @@ From repo (latest):
 pip install git+htps://github.com/py-mine/minebase
 ```
 
-> [!WARNING]
-> Currently, the library is still work in progress and very incomplete, which is why there is currently no
-> documentation. You are free to use this library in it's current state if you wish to, however, if you do so, you will
-> need to figure things out on your own. (You can ask on our discord server if you do need help.)
+## Usage
+
+```python
+from minebase import load_version, load_common_data, Edition
+
+common_data = load_common_data(Edition.PC)
+version_info = load_version("1.21.6", Edition.PC)
+
+status_server_bound_packets = version_info["protocol"]["status"]["toServer"]["types"]["packet"]
+print(status_server_bound_packets)
+```
