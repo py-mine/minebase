@@ -53,24 +53,42 @@ jobs:
           echo "latest_tag=$latest_tag" >> "$GITHUB_OUTPUT"
 
       - name: Update submodule and push
-        if: steps.version_check.outputs.current_commit != steps.version_check.outputs.latest_commit
+        id: update
         run: |
+          # Check if the step above identified an update
+          if [ "${{ steps.version_check.outputs.current_commit }}" = "${{ steps.version_check.outputs.latest_commit }}" ]; then
+            echo "Submodule is already up to date. Skipping update."
+            echo "should_continue=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          update_branch="update-mcdata-${{ steps.version_check.outputs.latest_tag }}"
+
+          # Check if the branch already exists on the remote
+          if git ls-remote --exit-code --heads origin "$update_branch" >/dev/null; then
+            echo "Branch $update_branch already exists. Skipping update."
+            echo "should_continue=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
           echo "Updating minecraft-data to tag ${{ steps.version_check.outputs.latest_tag }}"
 
+          # Update the submodule
           cd minebase/data
           git checkout "${{ steps.version_check.outputs.latest_commit }}"
           cd ../..
 
-          # Commit and push the updated submodule reference
-          update_branch="update-mcdata-${{ steps.version_check.outputs.latest_tag }}"
+          # Commit the changes and push
           git checkout -b "$update_branch"
           git add minebase/data
           git commit -m "Update submodule to minecraft-data ${{ steps.version_check.outputs.latest_tag }}"
           git push --set-upstream origin "$update_branch"
 
+          echo "should_continue=true" >> "$GITHUB_OUTPUT"
+
       - name: Create pull request
         id: create_pr
-        if: steps.version_check.outputs.current_commit != steps.version_check.outputs.latest_commit
+        if: steps.update.outputs.should_continue == 'true'
         uses: repo-sync/pull-request@v2
         with:
           # We need to use a bot token to be able to trigger workflows that listen to pull_request calls
@@ -86,7 +104,7 @@ jobs:
             this minecraft-data repository accessible to the users.
 
       - name: Setup uv
-        if: steps.version_check.outputs.current_commit != steps.version_check.outputs.latest_commit
+        if: steps.update.outputs.should_continue == 'true'
         uses: astral-sh/setup-uv@v6
         with:
           version: "latest"
@@ -96,12 +114,12 @@ jobs:
           cache-suffix: "mcdata-update"
 
       - name: Install dependencies
-        if: steps.version_check.outputs.current_commit != steps.version_check.outputs.latest_commit
+        if: steps.update.outputs.should_continue == 'true'
         run: |
           uv sync --no-default-groups --no-install-project --group release
 
       - name: Add changelog fragment
-        if: steps.version_check.outputs.current_commit != steps.version_check.outputs.latest_commit
+        if: steps.update.outputs.should_continue == 'true'
         run: |
           towncrier create ${{ steps.create_pr.outputs.pr_number }}.feature.md -c "Update minecraft-data to ${{ steps.version_check.outputs.latest_tag }}"
           git add changes
