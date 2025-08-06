@@ -76,7 +76,6 @@ jobs:
           github_token: ${{ steps.generate_token.outputs.token }}
           source_branch: update-mcdata-${{ steps.version_check.outputs.latest_tag }}
           destination_branch: main
-          pr_assignee: ${{ github.event.sender.login }}
           pr_title: Update submodule to minecraft-data ${{ steps.version_check.outputs.latest_tag }}
           pr_label: "a: dependencies"
           pr_body: |
