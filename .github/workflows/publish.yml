@@ -1,0 +1,141 @@
+---
+name: Publish to PyPI / GitHub
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+env:
+  PYTHON_VERSION: "3.13"
+
+jobs:
+  build:
+    name: "Build the project"
+    runs-on: ubuntu-latest
+
+    outputs:
+      prerelease: ${{ steps.check-version.outputs.prerelease }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "latest"
+          python-version: ${{ env.PYTHON_VERSION }}
+          activate-environment: true
+          enable-cache: true
+          cache-suffix: "build"
+
+      - name: Install dependencies
+        run: |
+          uv sync --no-default-groups --group release
+
+      - name: Build project for distribution
+        run: uv build
+
+      - name: Upload build files
+        uses: actions/upload-artifact@v4
+        with:
+          name: "dist"
+          path: "dist/"
+          if-no-files-found: error
+          retention-days: 5
+
+      - name: Check pre-release status
+        id: check-version
+        run: |
+          version="$(uv pip list --format json | jq -r '.[] | select(.name == "minebase") | .version')"
+          if [[ "$version" =~ "^[0-9]+\.[0-9]+\.[0-9]+$" ]]; then
+            echo prerelease=true >> $GITHUB_OUTPUT
+          else
+            echo prerelease=false >> $GITHUB_OUTPUT
+          fi
+
+      # Get content of the changelog for the latest release, so that we can use
+      # it as the body for a GitHub tag
+      - name: Obtain latest changelog
+        # Our CHANGELOG.md uses `---` separators between each published
+        # version. The command below obtains all content until that separator,
+        # leaving us with just the content for the latest version. We then
+        # remove first 2 lines, being level 2 header with version and date,
+        # and a blank line under it, and also the last 2 lines, being the
+        # separator itself, and a blank line above it.
+        run: |
+          awk '1;/---/{exit}' CHANGELOG.md | tail -n +3 | head -n -2 \
+            > changelog.txt
+
+      - name: Upload release changelog
+        uses: actions/upload-artifact@v4
+        with:
+          name: "changelog"
+          path: "changelog.txt"
+          if-no-files-found: error
+          retention-days: 5
+
+  publish-github:
+    name: "Publish a GitHub release"
+    needs: build
+    runs-on: ubuntu-latest
+    environment: release
+
+    steps:
+      - name: Download the distribution files from PR artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: "dist"
+          path: "dist/"
+
+      - name: Download the changelog from PR artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: "changelog"
+
+      - name: Generate token
+        id: generate_token
+        uses: tibdex/github-app-token@v2
+        with:
+          app_id: ${{ secrets.APP_ID }}
+          private_key: ${{ secrets.PRIVATE_KEY }}
+
+      - name: Create Release
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: "dist/*"
+          token: ${{ steps.generate_token.outputs.token }}
+          bodyFile: changelog.txt
+          draft: false
+          prerelease: ${{ needs.build.outputs.prerelease == 'true' }}
+
+  publish-pypi:
+    name: "Publish to PyPI"
+    needs: build
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      # Used to authenticate to PyPI via OIDC.
+      id-token: write
+
+    steps:
+      - name: Download the distribution files from PR artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: "dist"
+          path: "dist/"
+
+      # Upload to Test PyPI first, in case something fails.
+      - name: Upload to Test PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          # the "legacy" in the URL doesn't mean it's deprecated
+          repository-url: https://test.pypi.org/legacy/
+
+      # This uses PyPI's trusted publishing, so no token is required
+      - name: Release to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
