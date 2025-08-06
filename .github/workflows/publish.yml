@@ -46,6 +46,9 @@ jobs:
           # Checkout the specific tag
           ref: ${{ steps.get_tag.outputs.tag }}
 
+          # We will need the minecraft-data submodule to run tests
+          submodules: "recursive"
+
       - name: Setup uv
         uses: astral-sh/setup-uv@v6
         with:
