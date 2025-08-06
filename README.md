@@ -26,10 +26,26 @@ pip install git+htps://github.com/py-mine/minebase
 
 ```python
 from minebase import load_version, load_common_data, Edition
+from pprint import pprint  # pretty print (for easier readability)
 
 common_data = load_common_data(Edition.PC)
 version_info = load_version("1.21.6", Edition.PC)
 
 status_server_bound_packets = version_info["protocol"]["status"]["toServer"]["types"]["packet"]
-print(status_server_bound_packets)
+pprint(status_server_bound_packets)
+```
+
+Output:
+
+```python
+['container',
+ [{'name': 'name',
+   'type': ['mapper',
+            {'mappings': {'0x00': 'ping_start', '0x01': 'ping'},
+             'type': 'varint'}]},
+  {'name': 'params',
+   'type': ['switch',
+            {'compareTo': 'name',
+             'fields': {'ping': 'packet_ping',
+                        'ping_start': 'packet_ping_start'}}]}]]
 ```
