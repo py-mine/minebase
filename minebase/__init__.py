@@ -57,8 +57,8 @@ def load_version(version: str, edition: Edition = Edition.PC) -> dict[str, Any]:
     for field, dir_suffix in version_data.items():
         dir_path = DATA_PATH.joinpath(*dir_suffix.split("/"))
 
-        # proto is a yaml file, we currently don't support loading it
-        if field == "proto":
+        # Skip yaml files, we currently don't support loading them
+        if field in {"proto", "types"}:
             continue
 
         file = dir_path / (field + ".json")
