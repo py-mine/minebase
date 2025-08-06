@@ -2,7 +2,7 @@
 
 [![discord chat](https://img.shields.io/discord/936788458939224094.svg?logo=Discord)](https://discord.gg/C2wX7zduxC)
 ![supported python versions](https://img.shields.io/pypi/pyversions/minebase.svg)
-[![current PyPI version](https://img.shields.io/pypi/v/minebase.svg)](https://pypi.org/project/mcproto/)
+[![current PyPI version](https://img.shields.io/pypi/v/minebase.svg)](https://pypi.org/project/minebase/)
 [![CI](https://github.com/py-mine/minebase/actions/workflows/main.yml/badge.svg)](https://github.com/py-mine/minebase/actions/workflows/main.yml)
 
 Minebase is a python wrapper around [`PrismarineJS/minecraft-data`](https://github.com/PrismarineJS/minecraft-data). It
