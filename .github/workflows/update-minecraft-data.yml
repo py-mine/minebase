@@ -5,7 +5,7 @@ on:
     - cron: "0 15 * * *" # every day at 3 PM UTC
 
 jobs:
-  updates-mcdata:
+  update-mcdata:
     runs-on: ubuntu-latest
     steps:
       - name: Generate token
@@ -103,7 +103,7 @@ jobs:
       - name: Add changelog fragment
         if: steps.version_check.outputs.current_commit != steps.version_check.outputs.latest_commit
         run: |
-          towncrier create {{ steps.pr_number.outputs.pr_number }}.feature-md -c "Update minecraft-data to ${{ steps.version_check.outputs.latest_tag }}"
+          towncrier create ${{ steps.create_pr.outputs.pr_number }}.feature.md -c "Update minecraft-data to ${{ steps.version_check.outputs.latest_tag }}"
           git add changes
           git commit --amend --no-edit
           git push --force
