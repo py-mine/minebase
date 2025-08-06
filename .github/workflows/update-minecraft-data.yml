@@ -64,6 +64,7 @@ jobs:
           # Commit and push the updated submodule reference
           update_branch="update-mcdata-${{ steps.version_check.outputs.latest_tag }}"
           git checkout -b "$update_branch"
+          git add minebase/data
           git commit -m "Update submodule to minecraft-data ${{ steps.version_check.outputs.latest_tag }}"
           git push origin "$update_branch"
 
