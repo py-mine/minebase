@@ -37,7 +37,7 @@ jobs:
           git fetch --tags
 
       - name: Get current and latest commit
-        if: version_check
+        id: version_check
         run: |
           current_commit="$(git ls-tree HEAD minebase/data | awk '{print $3}')"
           cd minebase/data
