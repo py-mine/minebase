@@ -1,0 +1,84 @@
+name: Update minecraft-data
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 15 * * *" # every day at 3 PM UTC
+
+jobs:
+  updates-mcdata:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate token
+        id: generate_token
+        uses: tibdex/github-app-token@v2
+        with:
+          app-id: ${{ secrets.PYMINE_BOT_APP_ID }}
+          private-key: ${{ secrets.PYMINE_BOT_PRIVATE_KEY }}
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ steps.generate_token.outputs.token }}
+          submodules: "recursive"
+
+      # Make the github application be the committer
+      # (see: https://stackoverflow.com/a/74071223 on how to obtain the committer email)
+      - name: Setup git config
+        run: |
+          git config --global user.name "py-mine-ci-bot"
+          git config --global user.email "121461646+py-mine-ci-bot[bot]@users.noreply.github.com"
+
+      # By default, we do a shallow submodule clone, so we'll need to fetch
+      # to obtain any new tags. (This might take a while, minecraft-data repo
+      # is quite big.)
+      - name: Fetch minecraft-data git tags
+        run: |
+          cd minebase/data
+          git fetch --tags
+
+      - name: Get current and latest commit
+        if: version_check
+        run: |
+          current_commit="$(git ls-tree HEAD minebase/data | awk '{print $3}')"
+          cd minebase/data
+          latest_tag="$(git tag --sort=-v:refname | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1)"
+          latest_commit="$(git rev-list -n 1 "$latest_tag")"
+
+          echo "Current commit: $current_commit"
+          echo "Latest tag: $latest_tag"
+          echo "Latest commit: $latest_commit"
+
+          echo "current_commit=$current_commit" >> "$GITHUB_OUTPUT"
+          echo "latest_commit=$latest_commit" >> "$GITHUB_OUTPUT"
+          echo "latest_tag=$latest_tag" >> "$GITHUB_OUTPUT"
+
+      - name: Update submodule and push
+        if: steps.version_check.outputs.current_commit != steps.version_check.outputs.latest_commit
+        run: |
+          echo "Updating minecraft-data to tag ${{ steps.version_check.outputs.latest_tag }}"
+
+          cd minebase/data
+          git checkout "${{ steps.version_check.outputs.latest_commit }}"
+          cd ../..
+
+          # Commit and push the updated submodule reference
+          update_branch="update-mcdata-${{ steps.version_check.outputs.latest_tag }}"
+          git checkout -b "$update_branch"
+          git commit -m "Update submodule to minecraft-data ${{ steps.version_check.outputs.latest_tag }}"
+          git push origin "$update_branch"
+
+      - name: Create pull request
+        uses: repo-sync/pull-request@v2
+        with:
+          # We need to use a bot token to be able to trigger workflows that listen to pull_request calls
+          github_token: ${{ steps.generate_token.outputs.token }}
+          source_branch: update-mcdata-${{ steps.version_check.outputs.latest_tag }}
+          destination_branch: main
+          pr_assignee: ${{ github.event.sender.login }}
+          pr_title: Update submodule to minecraft-data ${{ steps.version_check.outputs.latest_tag }}
+          pr_label: "a: dependencies"
+          pr_body: |
+            Bumps minecraft-data repository to the latest release: ${{ steps.version_check.outputs.latest_tag }}
+
+            Once the pull request is merged, it might be a good idea to consider making a new release, to make
+            this minecraft-data repository accessible to the users.
