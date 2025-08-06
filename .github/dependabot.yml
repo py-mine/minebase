@@ -12,7 +12,6 @@ updates:
     labels:
       - "a: dependencies"
       - "p: 3 - low"
-      - "t: enhancement"
 
   - package-ecosystem: "github-actions"
     directory: "/"
@@ -22,4 +21,3 @@ updates:
       - "a: dependencies"
       - "a: CI"
       - "p: 3 - low"
-      - "t: enhancement"
