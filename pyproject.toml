@@ -223,7 +223,6 @@ pre-commit = "pre-commit run --all-files"
 test = "pytest -v --failed-first"
 retest = "pytest -v --last-failed"
 changelog-preview = "towncrier build --draft --version next"
-docs = "mkdocs serve"
 
 [tool.poe.tasks.build]
 cmd = "uv build"
@@ -233,6 +232,18 @@ help = "Builds the whl and tar.gz distributions"
 cmd = "uv publish"
 deps = ["pre-commit", "test", "build"]
 help = "Requires all the checks to pass before building and publishing"
+
+[tool.poe.tasks._pr_number]
+cmd = "gh pr view --json number -q .number"
+help = "Get the number of this PR (for current branch)"
+
+[tool.poe.tasks.changelog-this]
+cmd = "towncrier create ${PR_NUMBER}.${FRAGMENT_TYPE}.md"
+args = [
+  { name = "FRAGMENT_TYPE", positional = true, type = "string", required = true },
+]
+uses = { PR_NUMBER = "_pr_number" }
+help = "Create a changelog fragment for this PR (uses github CLI to get PR number); use like: poe changelog-this feature -- -c \"My cool feature\""
 
 [build-system]
 requires = ["hatchling", "uv-dynamic-versioning"]
