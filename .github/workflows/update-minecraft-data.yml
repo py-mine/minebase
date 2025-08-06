@@ -66,7 +66,7 @@ jobs:
           git checkout -b "$update_branch"
           git add minebase/data
           git commit -m "Update submodule to minecraft-data ${{ steps.version_check.outputs.latest_tag }}"
-          git push origin "$update_branch"
+          git push --set-upstream origin "$update_branch"
 
       - name: Create pull request
         id: create_pr
