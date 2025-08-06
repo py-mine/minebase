@@ -68,6 +68,7 @@ jobs:
           git push origin "$update_branch"
 
       - name: Create pull request
+        if: steps.version_check.outputs.current_commit != steps.version_check.outputs.latest_commit
         uses: repo-sync/pull-request@v2
         with:
           # We need to use a bot token to be able to trigger workflows that listen to pull_request calls
