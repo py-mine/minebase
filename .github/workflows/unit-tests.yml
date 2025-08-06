@@ -20,6 +20,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          # We will need the minecraft-data submodule to run tests
+          submodules: "recursive"
 
       - name: Setup uv
         uses: astral-sh/setup-uv@v6
