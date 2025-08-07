@@ -43,7 +43,11 @@ dev = [
 ]
 lint = ["basedpyright>=1.31.1", "pre-commit>=4.2.0", "ruff>=0.12.7"]
 test = ["pytest>=8.4.1", "pytest-cov>=6.2.1"]
-release = ["towncrier>=24.8.0", "uv-dynamic-versioning>=0.8.2"]
+release = [
+  "hatchling>=1.27.0",
+  "towncrier>=24.8.0",
+  "uv-dynamic-versioning>=0.8.2",
+]
 
 [tool.basedpyright]
 pythonPlatform = "All"
@@ -254,3 +258,4 @@ source = "uv-dynamic-versioning"
 
 [tool.uv-dynamic-versioning]
 fallback-version = "0.0.0"
+metadata = false
