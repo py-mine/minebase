@@ -7,12 +7,10 @@ on:
       # This pattern is not a typical regular expression, see:
       # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#filter-pattern-cheat-sheet
       - "v*"
-  workflow_dispatch:
-    inputs:
-      tag:
-        description: Git Tag to use for the release
-        required: true
-        type: string
+    branches:
+      # Also run on every commit to main. This allows us to test the build & release pipeline and eventually leads to a
+      # Test PyPI release. Unlike with a tag push, this will not release a full PyPI release, nor create a GitHub release.
+      - main
 
 permissions:
   contents: read
@@ -26,28 +24,18 @@ jobs:
     runs-on: ubuntu-latest
 
     outputs:
+      version: ${{ steps.check-version.outputs.version }}
       prerelease: ${{ steps.check-version.outputs.prerelease }}
+      tagged_release: ${{ steps.check-version.outputs.tagged_release }}
 
     steps:
-      - name: Get Tag
-        id: get_tag
-        run: |
-          if [[ "${{ github.event_name }}" == "push" ]]; then
-            # For push events, the tag is in GITHUB_REF
-            echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-          elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            # For workflow_dispatch, the tag is in the input
-            echo "tag=${{ github.event.inputs.tag }}" >> $GITHUB_OUTPUT
-          fi
-
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          # Checkout the specific tag
-          ref: ${{ steps.get_tag.outputs.tag }}
-
-          # We will need the minecraft-data submodule to run tests
+          # Load the minecraft-data submodule, as it needs to be included in the release
           submodules: "recursive"
+          # Do a full clone for uv-dynamic-versioning to pick up the git version
+          fetch-depth: 0
 
       - name: Setup uv
         uses: astral-sh/setup-uv@v6
@@ -62,8 +50,39 @@ jobs:
         run: |
           uv sync --no-default-groups --group release
 
+      - name: Check version status
+        id: check-version
+        run: |
+          version="$(hatchling version)"
+
+          echo "Project version: $version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+          # Determine whether we're doing a tagged release e.g. this workflow
+          # was triggered by a git tag ref that matches the project's current
+          # version, so a full PyPI release should be made, alongside all of
+          # the other release steps. If this isn't the case, only a Test PyPI
+          # release will be performed.
+          if [[ "${GITHUB_REF}" == "refs/tags/v${version}" ]]; then
+            echo "This is a new tagged release"
+            echo "tagged_release=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "This is an untagged dev release"
+            echo "tagged_release=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          # This is used to mark the version as prerelease on PyPI if it doesn't
+          # follow the full release x.y.z format (e.g. if it's 1.2.4a1)
+          if [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "This is a stable version release"
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "This is a pre-release version"
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Build project for distribution
-        run: uv build
+        run: uv build --all-packages
 
       - name: Upload build files
         uses: actions/upload-artifact@v4
@@ -73,19 +92,9 @@ jobs:
           if-no-files-found: error
           retention-days: 5
 
-      - name: Check pre-release status
-        id: check-version
-        run: |
-          version="$(uv pip list --format json | jq -r '.[] | select(.name == "minebase") | .version')"
-          if [[ "$version" =~ "^[0-9]+\.[0-9]+\.[0-9]+$" ]]; then
-            echo prerelease=true >> $GITHUB_OUTPUT
-          else
-            echo prerelease=false >> $GITHUB_OUTPUT
-          fi
-
-      # Get content of the changelog for the latest release, so that we can use
-      # it as the body for a GitHub tag
+      # Get content of the changelog for the latest release, so that we can use it as the body for a GitHub tag
       - name: Obtain latest changelog
+        if: startsWith(github.ref, 'refs/tags/') # only on proper releases
         # Our CHANGELOG.md uses `---` separators between each published
         # version. The command below obtains all content until that separator,
         # leaving us with just the content for the latest version. We then
@@ -94,6 +103,17 @@ jobs:
         # separator itself, and a blank line above it.
         run: |
           awk '1;/---/{exit}' CHANGELOG.md | tail -n +3 | head -n -2 \
+            > changelog.txt
+
+      - name: Obtain preview changelog
+        if: "!startsWith(github.ref, 'refs/tags/')" # only on dev/untagged releases
+        env:
+          VERSION: ${{ steps.check-version.outputs.version }}
+        run: |
+          # Generate a draft changelog from the pending unreleased change fragments.
+          # Similarly to the above, this then gets rid of the separator and version header,
+          # leaving a clean changelog
+          towncrier build --draft --version "$VERSION" | tail -n +3 | head -n -4 \
             > changelog.txt
 
       - name: Upload release changelog
@@ -106,18 +126,19 @@ jobs:
 
   publish-github:
     name: "Publish a GitHub release"
+    if: needs.build.outputs.tagged_release == 'true' # only publish to GitHub on tagged releases
     needs: build
     runs-on: ubuntu-latest
-    environment: release
+    environment: release # requires approval
 
     steps:
-      - name: Download the distribution files from PR artifact
+      - name: Download the distribution files from build artifact
         uses: actions/download-artifact@v5
         with:
           name: "dist"
           path: "dist/"
 
-      - name: Download the changelog from PR artifact
+      - name: Download the changelog from build artifact
         uses: actions/download-artifact@v5
         with:
           name: "changelog"
@@ -138,17 +159,43 @@ jobs:
           draft: false
           prerelease: ${{ needs.build.outputs.prerelease == 'true' }}
 
-  publish-pypi:
-    name: "Publish to PyPI"
+  publish-test-pypi:
+    name: "Publish to Test PyPI"
+    # No if condition here, publish both tagged and untagged releases to Test PyPI.
     needs: build
     runs-on: ubuntu-latest
-    environment: release
+    environment: test-pypi # no approval
+    permissions:
+      # Used to authenticate to Test PyPI via OIDC.
+      id-token: write
+
+    steps:
+      - name: Download the distribution files from build artifact
+        uses: actions/download-artifact@v5
+        with:
+          name: "dist"
+          path: "dist/"
+
+      - name: Upload to Test PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          # the "legacy" in the URL doesn't mean it's deprecated
+          repository-url: https://test.pypi.org/legacy/
+          # Enable verbose mode for easy debugging
+          verbose: true
+
+  publish-pypi:
+    name: "Publish to PyPI"
+    if: needs.build.outputs.tagged_release == 'true' # only publish to PyPI on tagged releases
+    needs: build
+    runs-on: ubuntu-latest
+    environment: release # requires approval
     permissions:
       # Used to authenticate to PyPI via OIDC.
       id-token: write
 
     steps:
-      - name: Download the distribution files from PR artifact
+      - name: Download the distribution files from build artifact
         uses: actions/download-artifact@v5
         with:
           name: "dist"
