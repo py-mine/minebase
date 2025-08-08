@@ -26,7 +26,10 @@ classifiers = [
 ]
 keywords = ["minecraft", "data"]
 requires-python = ">=3.9"
-dependencies = ["pydantic>=2.11.7"]
+dependencies = [
+    "eval-type-backport>=0.2.2",
+    "pydantic>=2.11.7",
+]
 
 [project.urls]
 "Source code" = "https://github.com/py-mine/minebase"
