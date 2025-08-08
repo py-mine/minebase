@@ -9,7 +9,6 @@ import pytest
 
 from minebase import (
     Edition,
-    _load_data_paths,  # pyright: ignore[reportPrivateUsage]
     _validate_data,  # pyright: ignore[reportPrivateUsage]
     load_common_data,
     load_version,
@@ -29,25 +28,7 @@ def test_load_common_data_for_each_edition(edition: Edition) -> None:
     assert data, f"No common data found for edition {edition}"
 
 
-@pytest.mark.parametrize("edition", Edition.__members__.values())
-def test_all_versions_loadable(edition: Edition) -> None:
-    """Iterate over every version defined in dataPaths.json and ensure it loads."""
-    manifest = _load_data_paths()
-    if edition.value not in manifest:
-        pytest.skip(f"Edition {edition.value} not present in dataPaths.json")
-
-    versions = manifest[edition.value]
-    assert versions, f"No versions listed for edition {edition}"
-
-    failed_versions: list[tuple[str, Exception]] = []
-
-    for version in versions:
-        try:
-            result = load_version(version, edition)
-            assert isinstance(result, dict)
-        except Exception as exc:  # noqa: PERF203,BLE001
-            failed_versions.append((version, exc))
-
-    if failed_versions:
-        fails = "\n".join(f"{v}: {err}" for v, err in failed_versions)
-        pytest.fail(f"{len(failed_versions)} version(s) failed to load for {edition.name}:\n{fails}")
+def test_all_versions_loadable(edition: Edition, version: str) -> None:  # parametrized from conftest
+    """Ensure that a specific version for an edition can be loaded."""
+    result = load_version(version, edition)
+    assert isinstance(result, dict)
