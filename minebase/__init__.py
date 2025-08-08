@@ -48,6 +48,13 @@ def _load_version_manifest(version: str, edition: Edition = Edition.PC) -> "dict
         raise ValueError(f"Version {version} doesn't exist for edition {edition.name}") from exc
 
 
+def supported_versions(edition: Edition = Edition.PC) -> list[str]:
+    """Get a list of all supported minecraft versions."""
+    manifest = _load_data_paths()
+    edition_info = manifest[edition.value]
+    return list(edition_info.keys())
+
+
 def load_version(version: str, edition: Edition = Edition.PC) -> dict[str, Any]:
     """Load minecraft-data for given `version` and `edition`."""
     _validate_data()
