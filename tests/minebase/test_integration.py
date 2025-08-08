@@ -13,6 +13,7 @@ from minebase import (
     load_common_data,
     load_version,
 )
+from minebase.types.common_data import CommonData
 
 
 def test_data_submodule_is_initialized() -> None:
@@ -24,7 +25,7 @@ def test_data_submodule_is_initialized() -> None:
 def test_load_common_data_for_each_edition(edition: Edition) -> None:
     """Ensure common data exists and is loadable for each edition."""
     data = load_common_data(edition)
-    assert isinstance(data, dict)
+    assert isinstance(data, CommonData)
     assert data, f"No common data found for edition {edition}"
 
 

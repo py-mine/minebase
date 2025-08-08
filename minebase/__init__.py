@@ -1,8 +1,11 @@
+from __future__ import annotations
+
 import json
 from enum import Enum
 from pathlib import Path
 from typing import Any, cast
 
+from minebase.types.common_data import CommonData
 from minebase.types.data_paths import DataPaths
 
 DATA_SUBMODULE_PATH = Path(__file__).parent / "data"
@@ -35,13 +38,15 @@ def _load_data_paths() -> DataPaths:
         raise ValueError(f"minecraft-data submodule didn't contain data paths manifest (missing {file})")
 
     with file.open("rb") as fp:
-        return cast("DataPaths", json.load(fp))
+        data = cast("DataPaths", json.load(fp))
+
+    return DataPaths.model_validate(data)
 
 
-def _load_version_manifest(version: str, edition: Edition = Edition.PC) -> "dict[str, str]":
+def _load_version_manifest(version: str, edition: Edition = Edition.PC) -> dict[str, str]:
     """Load the data paths manifest for given version (if it exists)."""
     manifest = _load_data_paths()
-    edition_info = manifest[edition.value]
+    edition_info = manifest.pc if edition is Edition.PC else manifest.bedrock
     try:
         return edition_info[version]
     except KeyError as exc:
@@ -51,7 +56,7 @@ def _load_version_manifest(version: str, edition: Edition = Edition.PC) -> "dict
 def supported_versions(edition: Edition = Edition.PC) -> list[str]:
     """Get a list of all supported minecraft versions."""
     manifest = _load_data_paths()
-    edition_info = manifest[edition.value]
+    edition_info = getattr(manifest, edition.value)
     return list(edition_info.keys())
 
 
@@ -79,7 +84,7 @@ def load_version(version: str, edition: Edition = Edition.PC) -> dict[str, Any]:
     return data
 
 
-def load_common_data(edition: Edition = Edition.PC) -> dict[str, Any]:
+def load_common_data(edition: Edition = Edition.PC) -> CommonData:
     """Load the common data from minecraft-data for given `edition`."""
     _validate_data()
     common_dir = DATA_PATH / edition.value / "common"
@@ -94,4 +99,4 @@ def load_common_data(edition: Edition = Edition.PC) -> dict[str, Any]:
         with file.open("rb") as fp:
             data[file.stem] = json.load(fp)
 
-    return data
+    return CommonData.model_validate(data)
