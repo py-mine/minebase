@@ -21,7 +21,13 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
 
         params: list[tuple[Edition, str]] = []
         for edition in Edition.__members__.values():
-            versions = manifest[edition.value]
+            if edition is Edition.BEDROCK:
+                versions = manifest.bedrock
+            elif edition is Edition.PC:
+                versions = manifest.pc
+            else:
+                raise ValueError(f"Unhandled edition enum variant: {edition}")
+
             if not versions:
                 pytest.skip(f"No versions found for edition {edition}")
             params.extend((edition, version) for version in versions)
