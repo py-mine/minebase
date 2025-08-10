@@ -14,6 +14,7 @@ from minebase import (
     load_version,
 )
 from minebase.types.common_data import CommonData
+from minebase.types.mcdata import BaseMinecraftData
 
 
 def test_data_submodule_is_initialized() -> None:
@@ -32,4 +33,4 @@ def test_load_common_data_for_each_edition(edition: Edition) -> None:
 def test_all_versions_loadable(edition: Edition, version: str) -> None:  # parametrized from conftest
     """Ensure that a specific version for an edition can be loaded."""
     result = load_version(version, edition)
-    assert isinstance(result, dict)
+    assert isinstance(result, BaseMinecraftData)
