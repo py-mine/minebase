@@ -32,3 +32,11 @@ jobs:
           labels: |
             s: needs review
             s: waiting for author
+
+      - name: Check PR stalled
+        uses: mheap/github-action-required-labels@v5
+        with:
+          mode: exactly
+          count: 0
+          labels: |
+            s: stalled
