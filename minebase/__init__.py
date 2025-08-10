@@ -3,10 +3,11 @@ from __future__ import annotations
 import json
 from enum import Enum
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, Literal, cast, overload
 
 from minebase.types.common_data import CommonData
 from minebase.types.data_paths import DataPaths
+from minebase.types.mcdata import BedrockMinecraftData, PcMinecraftData
 
 DATA_SUBMODULE_PATH = Path(__file__).parent / "data"
 DATA_PATH = DATA_SUBMODULE_PATH / "data"
@@ -60,7 +61,15 @@ def supported_versions(edition: Edition = Edition.PC) -> list[str]:
     return list(edition_info.keys())
 
 
-def load_version(version: str, edition: Edition = Edition.PC) -> dict[str, Any]:
+@overload
+def load_version(version: str, edition: Literal[Edition.PC] = Edition.PC) -> PcMinecraftData: ...
+
+
+@overload
+def load_version(version: str, edition: Literal[Edition.BEDROCK]) -> BedrockMinecraftData: ...
+
+
+def load_version(version: str, edition: Edition = Edition.PC) -> PcMinecraftData | BedrockMinecraftData:
     """Load minecraft-data for given `version` and `edition`."""
     _validate_data()
     version_data = _load_version_manifest(version, edition)
@@ -81,7 +90,10 @@ def load_version(version: str, edition: Edition = Edition.PC) -> dict[str, Any]:
         with file.open("rb") as fp:
             data[field] = json.load(fp)
 
-    return data
+    if edition is Edition.PC:
+        return PcMinecraftData.model_validate(data)
+
+    return BedrockMinecraftData.model_validate(data)
 
 
 def load_common_data(edition: Edition = Edition.PC) -> CommonData:

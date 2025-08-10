@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import final
 
-from minebase.types.base import MinecraftDataModel
+from minebase.types._base import MinecraftDataModel
 
 
 @final
