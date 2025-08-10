@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, Literal, cast, overload
 
 from minebase.edition import Edition as Edition  # re-export
+from minebase.types._base import MinecraftValidationContext
 from minebase.types.common_data import CommonData
 from minebase.types.data_paths import DataPaths
+from minebase.types.mcdata import BedrockMinecraftData, PcMinecraftData
 
 DATA_SUBMODULE_PATH = Path(__file__).parent / "data"
 DATA_PATH = DATA_SUBMODULE_PATH / "data"
@@ -48,14 +50,14 @@ def _load_version_manifest(version: str, edition: Edition = Edition.PC) -> dict[
 
 def supported_versions(edition: Edition = Edition.PC) -> list[str]:
     """Get a list of all supported minecraft versions."""
-    manifest = _load_data_paths()
-    edition_info = getattr(manifest, edition.value)
-
     # We prefer versions from common data, as they're in a list, guaranteed to be
     # ordered as they were released
     data = load_common_data(edition)
     versions = data.versions
 
+    # This is just for a sanity check
+    manifest = _load_data_paths()
+    edition_info = getattr(manifest, edition.value)
     manifest_versions = set(edition_info.keys())
 
     # These versions are present in the PC edition manifest, but aren't in the common data versions.
@@ -78,7 +80,15 @@ def supported_versions(edition: Edition = Edition.PC) -> list[str]:
     return versions
 
 
-def load_version(version: str, edition: Edition = Edition.PC) -> dict[str, Any]:
+@overload
+def load_version(version: str, edition: Literal[Edition.PC] = Edition.PC) -> PcMinecraftData: ...
+
+
+@overload
+def load_version(version: str, edition: Literal[Edition.BEDROCK]) -> BedrockMinecraftData: ...
+
+
+def load_version(version: str, edition: Edition = Edition.PC) -> PcMinecraftData | BedrockMinecraftData:
     """Load minecraft-data for given `version` and `edition`."""
     _validate_data()
     version_data = _load_version_manifest(version, edition)
@@ -99,7 +109,12 @@ def load_version(version: str, edition: Edition = Edition.PC) -> dict[str, Any]:
         with file.open("rb") as fp:
             data[field] = json.load(fp)
 
-    return data
+    validation_context = MinecraftValidationContext(version=version, edition=edition, versions=supported_versions())
+
+    if edition is Edition.PC:
+        return PcMinecraftData.model_validate(data, context=validation_context)
+
+    return BedrockMinecraftData.model_validate(data, context=validation_context)
 
 
 def load_common_data(edition: Edition = Edition.PC) -> CommonData:

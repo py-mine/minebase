@@ -4,7 +4,7 @@ from typing import Literal, final
 
 from pydantic import model_validator
 
-from minebase.types.base import MinecraftDataModel
+from minebase.types._base import MinecraftDataModel
 
 
 @final
