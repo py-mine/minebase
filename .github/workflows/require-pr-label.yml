@@ -1,0 +1,31 @@
+name: Check labels
+
+on:
+  pull_request:
+    types: [opened, reopened, labeled, unlabeled, synchronize]
+
+jobs:
+  label-check:
+    name: do-not-merge
+    if: github.repository_owner == "py-mine"
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+
+    steps:
+      - name: Check there's no do-not-merge
+        uses: mheap/github-action-required-labels@v5
+        with:
+          mode: exactly
+          count: 0
+          labels: |
+            m: do-not-merge
+
+      - name: Check there's no unreloved review
+        uses: mheap/github-action-required-labels@v5
+        with:
+          mode: exactly
+          count: 0
+          labels: |
+            s: needs review
+            s: waiting for author
