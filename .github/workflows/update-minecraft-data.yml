@@ -104,7 +104,9 @@ jobs:
           gh pr create \
             --title "Update submodule to minecraft-data $LATEST_TAG" \
             --body-file pr-body.txt \
-            --label "a: dependencies"
+            --label "a: dependencies" \
+            --label "t: project" \
+            --label "p: 2 - normal" \
 
           PR_NUMBER="$(gh pr view --json number -q .number)"
           echo "PR #$PR_NUMBER opened"
