@@ -74,6 +74,8 @@ jobs:
             --title "Prepare for release of $VERSION" \
             --body-file pr-body.txt \
             --label "t: project" \
+            --label "a: documentation" \
+            --label "p: 1 - high" \
             --assignee "$SENDER"
 
           PR_NUMBER="$(gh pr view --json number -q .number)"
