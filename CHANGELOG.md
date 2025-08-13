@@ -1,3 +1,17 @@
+## Version 0.3.0 (2025-08-13)
+
+### Features
+
+- [#22](https://github.com/py-mine/minebase/issues/22): Add `supported_versions` function, returning all supported minecraft versions for given edition
+- [#25](https://github.com/py-mine/minebase/issues/25): Update minecraft-data to 3.95.1
+
+### Internal Changes
+
+- [#21](https://github.com/py-mine/minebase/issues/21): Publish Test PyPI releases on every commit to main
+- [#24](https://github.com/py-mine/minebase/issues/24): Automatically parametrize all tests that have both the `edition` and the `version` parameters over all edition,versions pairs through pytest metafunc.
+
+---
+
 ## Version 0.2.0 (2025-08-07)
 
 ### Features
