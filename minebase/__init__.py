@@ -1,22 +1,15 @@
 from __future__ import annotations
 
 import json
-from enum import Enum
 from pathlib import Path
 from typing import Any, cast
 
+from minebase.edition import Edition as Edition  # re-export
 from minebase.types.common_data import CommonData
 from minebase.types.data_paths import DataPaths
 
 DATA_SUBMODULE_PATH = Path(__file__).parent / "data"
 DATA_PATH = DATA_SUBMODULE_PATH / "data"
-
-
-class Edition(Enum):
-    """Available minecraft-data editions."""
-
-    PC = "pc"
-    BEDROCK = "bedrock"
 
 
 def _validate_data() -> None:
