@@ -13,27 +13,32 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
     If loading the manifest fails or no versions are found for a given edition, the test
     collection will be skipped with an appropriate message.
     """
-    if {"edition", "version"} <= set(metafunc.fixturenames):  # subset check
-        try:
-            manifest = _load_data_paths()
-        except Exception as exc:  # noqa: BLE001
-            pytest.skip(f"Could not load data paths manifest: {exc}")
+    if not metafunc.definition.get_closest_marker("parametrize_editions"):
+        return
 
-        params: list[tuple[Edition, str]] = []
-        for edition in Edition.__members__.values():
-            if edition is Edition.BEDROCK:
-                versions = manifest.bedrock
-            elif edition is Edition.PC:
-                versions = manifest.pc
-            else:
-                raise ValueError(f"Unhandled edition enum variant: {edition}")
+    if not {"edition", "version"} <= set(metafunc.fixturenames):
+        pytest.skip("Test marked with @pytest.mark.parametrize_editions must define 'edition' and 'version' fixtures")
 
-            if not versions:
-                pytest.skip(f"No versions found for edition {edition}")
-            params.extend((edition, version) for version in versions)
+    try:
+        manifest = _load_data_paths()
+    except Exception as exc:  # noqa: BLE001
+        pytest.skip(f"Could not load data paths manifest: {exc}")
 
-        metafunc.parametrize(
-            ("edition", "version"),
-            params,
-            ids=[f"{edition.name}-{version}" for edition, version in params],
-        )
+    params: list[tuple[Edition, str]] = []
+    for edition in Edition.__members__.values():
+        if edition is Edition.BEDROCK:
+            versions = manifest.bedrock
+        elif edition is Edition.PC:
+            versions = manifest.pc
+        else:
+            raise ValueError(f"Unhandled edition enum variant: {edition}")
+
+        if not versions:
+            pytest.skip(f"No versions found for edition {edition}")
+        params.extend((edition, version) for version in versions)
+
+    metafunc.parametrize(
+        ("edition", "version"),
+        params,
+        ids=[f"{edition.name}-{version}" for edition, version in params],
+    )

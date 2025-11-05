@@ -29,7 +29,8 @@ def test_load_common_data_for_each_edition(edition: Edition) -> None:
     assert data, f"No common data found for edition {edition}"
 
 
-def test_all_versions_loadable(edition: Edition, version: str) -> None:  # parametrized from conftest
+@pytest.mark.parametrize_editions
+def test_all_versions_loadable(edition: Edition, version: str) -> None:
     """Ensure that a specific version for an edition can be loaded."""
     result = load_version(version, edition)
     assert isinstance(result, dict)
