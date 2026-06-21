@@ -13,6 +13,8 @@ from minebase import (
     load_common_data,
     load_version,
 )
+from minebase.types.common_data import CommonData
+from minebase.types.mcdata import BaseMinecraftData
 
 
 def test_data_submodule_is_initialized() -> None:
@@ -24,11 +26,12 @@ def test_data_submodule_is_initialized() -> None:
 def test_load_common_data_for_each_edition(edition: Edition) -> None:
     """Ensure common data exists and is loadable for each edition."""
     data = load_common_data(edition)
-    assert isinstance(data, dict)
+    assert isinstance(data, CommonData)
     assert data, f"No common data found for edition {edition}"
 
 
-def test_all_versions_loadable(edition: Edition, version: str) -> None:  # parametrized from conftest
+@pytest.mark.parametrize_editions
+def test_all_versions_loadable(edition: Edition, version: str) -> None:
     """Ensure that a specific version for an edition can be loaded."""
     result = load_version(version, edition)
-    assert isinstance(result, dict)
+    assert isinstance(result, BaseMinecraftData)
